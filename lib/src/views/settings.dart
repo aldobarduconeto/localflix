@@ -55,7 +55,6 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   final _tokenController = TextEditingController();
-  bool _editingToken = false;
 
   @override
   void dispose() {

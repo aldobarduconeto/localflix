@@ -61,7 +61,7 @@ class _SourcesCardState extends State<SourcesCard> {
                     ),
                   ),
                 const SizedBox(height: 12),
-                const SelectableText(
+                SelectableText(
                   'Crie sua credencial em:\nhttps://www.themoviedb.org/settings/api',
                   style: TextStyle(color: Theme.of(dialog).brightness == Brightness.dark ? Colors.white54 : const Color(0xFF6B7280), fontSize: 12),
                 ),
