@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Localflix
+Comment=Filmes, séries e músicas locais
+Exec="@CMAKE_INSTALL_PREFIX@/localflix"
+Icon=@CMAKE_INSTALL_PREFIX@/share/icons/hicolor/512x512/apps/@APPLICATION_ID@.png
+Terminal=false
+Categories=AudioVideo;Player;
+StartupWMClass=@APPLICATION_ID@
