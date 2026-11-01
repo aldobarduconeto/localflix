@@ -164,10 +164,12 @@ class MediaFacts extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isDark
                     ? Colors.white.withValues(alpha: 0.08)
-                    : const Color(0x0E000000),
+                    : const Color(0x14E50914),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: isDark ? const Color(0x18FFFFFF) : const Color(0x15000000),
+                  color: isDark
+                      ? const Color(0x18FFFFFF)
+                      : const Color(0x30E50914),
                 ),
               ),
               child: Text(

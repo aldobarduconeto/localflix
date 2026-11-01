@@ -144,7 +144,9 @@ class _HomePageState extends State<HomePage> {
                 selected: filter == entry.key,
                 showCheckmark: false,
                 selectedColor: isDark ? Colors.white : const Color(0xFFE50914),
-                backgroundColor: isDark ? const Color(0x18FFFFFF) : const Color(0x0C000000),
+                backgroundColor: isDark
+                    ? const Color(0x18FFFFFF)
+                    : const Color(0xFFFFF1F2),
                 labelStyle: TextStyle(
                   color: filter == entry.key
                       ? (isDark ? Colors.black : Colors.white)
@@ -154,7 +156,9 @@ class _HomePageState extends State<HomePage> {
                 side: BorderSide(
                   color: filter == entry.key
                       ? (isDark ? Colors.white : const Color(0xFFE50914))
-                      : (isDark ? const Color(0x24FFFFFF) : const Color(0x18000000)),
+                      : (isDark
+                            ? const Color(0x24FFFFFF)
+                            : const Color(0x30E50914)),
                 ),
                 shape: const StadiumBorder(),
                 onSelected: (_) => setState(() {
@@ -232,7 +236,9 @@ class _HomePageState extends State<HomePage> {
                           Text(
                             'CINEMA, SÉRIES E MÚSICA. DO SEU JEITO.',
                             style: TextStyle(
-                              color: isDark ? Colors.white38 : const Color(0xFF6B7280),
+                              color: isDark
+                                  ? Colors.white38
+                                  : const Color(0xFF6B7280),
                               fontSize: 10,
                               letterSpacing: 1.2,
                               fontWeight: FontWeight.w700,
@@ -357,7 +363,9 @@ class _HomePageState extends State<HomePage> {
                                 ? Icons.video_library_outlined
                                 : Icons.search_off,
                             size: 40,
-                            color: isDark ? Colors.white38 : const Color(0xFF9CA3AF),
+                            color: isDark
+                                ? Colors.white38
+                                : const Color(0xFF9CA3AF),
                           ),
                           const SizedBox(height: 14),
                           Text(
@@ -368,7 +376,9 @@ class _HomePageState extends State<HomePage> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : const Color(0xFF11141A),
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF9F1822),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -376,7 +386,9 @@ class _HomePageState extends State<HomePage> {
                             'Escolha suas pastas ou experimente outro filtro.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: isDark ? Colors.white54 : const Color(0xFF6B7280),
+                              color: isDark
+                                  ? Colors.white54
+                                  : const Color(0xFF6B7280),
                             ),
                           ),
                           if (widget.library.isEmpty)
@@ -621,24 +633,31 @@ class _Featured extends StatelessWidget {
     child: Stack(
       children: [
         Positioned.fill(child: MediaArtwork(item: item, banner: true)),
-        const Positioned.fill(
+        Positioned.fill(
           child: DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
-                colors: [Color(0xF5101014), Color(0x15101014)],
+                colors: Theme.of(context).brightness == Brightness.dark
+                    ? const [Color(0xF5101014), Color(0x15101014)]
+                    : const [Color(0xF5FFF7F7), Color(0x15FCE4E7)],
               ),
             ),
           ),
         ),
-        const Positioned.fill(
+        Positioned.fill(
           child: DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Color(0xFF101014)],
+                colors: [
+                  Colors.transparent,
+                  Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF101014)
+                      : const Color(0xFFFBEDEF),
+                ],
               ),
             ),
           ),
@@ -654,10 +673,12 @@ class _Featured extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'EM DESTAQUE',
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white70
+                        : const Color(0xFF4B5563),
                     letterSpacing: 2,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
@@ -672,6 +693,9 @@ class _Featured extends StatelessWidget {
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : const Color(0xFF9F1822),
                     fontSize: wide ? 48 : 34,
                     height: 1.08,
                     fontWeight: FontWeight.w800,
@@ -687,8 +711,10 @@ class _Featured extends StatelessWidget {
                       : 'Filmes, séries e músicas que já fazem parte da sua história. Dê o play no seu acervo.',
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white70,
+                  style: TextStyle(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white70
+                        : const Color(0xFF4B5563),
                     height: 1.6,
                     fontSize: 13,
                   ),
@@ -701,8 +727,14 @@ class _Featured extends StatelessWidget {
                     FilledButton.icon(
                       autofocus: TvLayout.of(context),
                       style: FilledButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
+                        backgroundColor:
+                            Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : const Color(0xFFE50914),
+                        foregroundColor:
+                            Theme.of(context).brightness == Brightness.dark
+                            ? Colors.black
+                            : Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -731,8 +763,14 @@ class _Featured extends StatelessWidget {
                     if (item != null)
                       FilledButton.tonalIcon(
                         style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xB3484848),
-                          foregroundColor: Colors.white,
+                          backgroundColor:
+                              Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xB3484848)
+                              : const Color(0xD9FFF5F5),
+                          foregroundColor:
+                              Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : const Color(0xFF9F1822),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
@@ -785,162 +823,180 @@ class _MediaCardState extends State<_MediaCard> {
         transform: Matrix4.translationValues(0, active ? -5 : 0, 0),
         decoration: BoxDecoration(
           color: active
-              ? (isDark ? const Color(0x28FFFFFF) : const Color(0x0E000000))
+              ? (isDark ? const Color(0x28FFFFFF) : const Color(0x14E50914))
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: focused
                 ? const Color(0xFFE50914)
                 : active
-                    ? (isDark ? const Color(0x35FFFFFF) : const Color(0x22000000))
-                    : Colors.transparent,
+                ? (isDark ? const Color(0x35FFFFFF) : const Color(0x40E50914))
+                : Colors.transparent,
             width: 2.5,
           ),
         ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AspectRatio(
-            aspectRatio: widget.audio ? 1 : 1 / 1.45,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  MediaArtwork(item: widget.item),
-                  const Positioned.fill(
-                    child: IgnorePointer(
-                      child: DecoratedBox(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AspectRatio(
+              aspectRatio: widget.audio ? 1 : 1 / 1.45,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    MediaArtwork(item: widget.item),
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.center,
+                              end: Alignment.bottomCenter,
+                              colors:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? const [
+                                      Colors.transparent,
+                                      Color(0xB3000000),
+                                    ]
+                                  : const [
+                                      Colors.transparent,
+                                      Color(0x20E50914),
+                                    ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 10,
+                      left: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.center,
-                            end: Alignment.bottomCenter,
-                            colors: [Colors.transparent, Color(0xB3000000)],
+                          color: isDark
+                              ? const Color(0xB3101014)
+                              : const Color(0xD9B4232D),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          widget.audio
+                              ? 'MÚSICA'
+                              : (widget.item.metadata?.kind == 'tv' ||
+                                        widget.item.queryName.isSeries
+                                    ? 'SÉRIE'
+                                    : 'VÍDEO'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 10,
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xB3101014),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        widget.audio
-                            ? 'MÚSICA'
-                            : (widget.item.metadata?.kind == 'tv' ||
-                                      widget.item.queryName.isSeries
-                                  ? 'SÉRIE'
-                                  : 'VÍDEO'),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => widget.onPlay(widget.item),
-                      onLongPress: () => widget.onDetails(widget.item),
-                      onFocusChange: (value) {
-                        setState(() => focused = value);
-                        if (value)
-                          Scrollable.ensureVisible(
-                            context,
-                            duration: const Duration(milliseconds: 180),
-                            alignment: 0.5,
-                          );
-                      },
-                      child: Align(
-                        alignment: Alignment.bottomRight,
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFE50914),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.play_arrow_rounded,
-                              size: 22,
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => widget.onPlay(widget.item),
+                        onLongPress: () => widget.onDetails(widget.item),
+                        onFocusChange: (value) {
+                          setState(() => focused = value);
+                          if (value)
+                            Scrollable.ensureVisible(
+                              context,
+                              duration: const Duration(milliseconds: 180),
+                              alignment: 0.5,
+                            );
+                        },
+                        child: Align(
+                          alignment: Alignment.bottomRight,
+                          child: Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFE50914),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.play_arrow_rounded,
+                                size: 22,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 6, 0, 0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.item.metadata?.kind == 'tv' ||
+                                  widget.item.queryName.isSeries
+                              ? widget.item.metadata?.title ??
+                                    widget.item.queryName.title
+                              : widget.item.displayTitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: isDark ? null : const Color(0xFF9F1822),
+                            fontSize: TvLayout.of(context) ? 18 : 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.item.metadata?.year.isNotEmpty == true
+                              ? widget.item.metadata!.year
+                              : 'Arquivo local',
+                          style: TextStyle(
+                            color: isDark
+                                ? Colors.white54
+                                : const Color(0xFF6B7280),
+                            fontSize: TvLayout.of(context) ? 14 : 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                    width: TvLayout.of(context) ? 48 : 32,
+                    height: TvLayout.of(context) ? 48 : 32,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      tooltip: 'Informações de ${widget.item.displayTitle}',
+                      onPressed: () => widget.onDetails(widget.item),
+                      icon: Icon(
+                        Icons.more_horiz_rounded,
+                        size: 20,
+                        color: isDark
+                            ? Colors.white70
+                            : const Color(0xFF4B5563),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 6, 0, 0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.item.metadata?.kind == 'tv' ||
-                                widget.item.queryName.isSeries
-                            ? widget.item.metadata?.title ??
-                                  widget.item.queryName.title
-                            : widget.item.displayTitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: TvLayout.of(context) ? 18 : 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.item.metadata?.year.isNotEmpty == true
-                            ? widget.item.metadata!.year
-                            : 'Arquivo local',
-                        style: TextStyle(
-                          color: isDark ? Colors.white54 : const Color(0xFF6B7280),
-                          fontSize: TvLayout.of(context) ? 14 : 11,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  width: TvLayout.of(context) ? 48 : 32,
-                  height: TvLayout.of(context) ? 48 : 32,
-                  child: IconButton(
-                    padding: EdgeInsets.zero,
-                    tooltip: 'Informações de ${widget.item.displayTitle}',
-                    onPressed: () => widget.onDetails(widget.item),
-                    icon: Icon(
-                      Icons.more_horiz_rounded,
-                      size: 20,
-                      color: isDark ? Colors.white70 : const Color(0xFF4B5563),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 }

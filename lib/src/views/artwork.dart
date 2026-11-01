@@ -24,13 +24,18 @@ class MediaArtwork extends StatelessWidget {
       final isDark = Theme.of(context).brightness == Brightness.dark;
       final fallback = DecoratedBox(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isDark
-                ? const [Color(0xFF381016), Color(0xFF1C1C22), Color(0xFF0F0F14)]
-                : const [Color(0xFFE2E8F0), Color(0xFFCBD5E1), Color(0xFFB0BDCE)],
-          ),
+          color: isDark ? null : const Color(0xFFFBE7E9),
+          gradient: isDark
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF381016),
+                    Color(0xFF1C1C22),
+                    Color(0xFF0F0F14),
+                  ],
+                )
+              : null,
         ),
         child: Center(
           child: Icon(
@@ -38,7 +43,7 @@ class MediaArtwork extends StatelessWidget {
                 ? Icons.album_outlined
                 : Icons.local_movies_outlined,
             size: banner ? 88 : 48,
-            color: isDark ? Colors.white24 : const Color(0x40000000),
+            color: isDark ? Colors.white24 : const Color(0x66B4232D),
           ),
         ),
       );

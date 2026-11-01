@@ -248,7 +248,7 @@ final liquidGlassLightTheme = ThemeData(
     margin: EdgeInsets.zero,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(20),
-      side: const BorderSide(color: Color(0x15000000), width: 1),
+      side: const BorderSide(color: Color(0x30E50914), width: 1),
     ),
   ),
   dialogTheme: DialogThemeData(
@@ -450,7 +450,7 @@ class LiquidGlassCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final defaultBorder = borderColor ??
-        (isDark ? const Color(0x26FFFFFF) : const Color(0x1A000000));
+        (isDark ? const Color(0x26FFFFFF) : const Color(0x30E50914));
     final defaultBg = backgroundColor ??
         (isDark ? const Color(0x18FFFFFF) : const Color(0xD9FFFFFF));
 
@@ -468,7 +468,7 @@ class LiquidGlassCard extends StatelessWidget {
               BoxShadow(
                 color: isDark
                     ? const Color(0x33000000)
-                    : const Color(0x0D000000),
+                    : const Color(0x0DE50914),
                 blurRadius: 18,
                 offset: const Offset(0, 6),
               ),
