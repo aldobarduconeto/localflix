@@ -4,10 +4,6 @@ import 'package:localflix/src/app.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  fvp.registerWith(
-    options: {
-      'platforms': ['windows', 'linux'],
-    },
-  );
+  fvp.registerWith();
   runApp(const App());
 }

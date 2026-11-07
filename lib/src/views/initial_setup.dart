@@ -156,6 +156,16 @@ class _InitialSetupState extends State<InitialSetup> {
                         const SizedBox(height: 10),
                         _featureRow(
                           context,
+                          icon: Icons.ondemand_video_outlined,
+                          title: 'Escolha o player dos vídeos do YouTube',
+                          desc: 'Os vídeos das Inscrições abrem no Localflix por padrão. '
+                              'Em Configurações → Player & Reprodução, ative '
+                              '“Abrir vídeos no YouTube” para assistir no app oficial '
+                              'ou no navegador.',
+                        ),
+                        const SizedBox(height: 10),
+                        _featureRow(
+                          context,
                           icon: Icons.movie_filter_outlined,
                           title: 'Reprodução local de alto desempenho',
                           desc: 'Assista a vídeos 4K/HDR e ouça suas faixas de áudio sem travamentos e com aceleração nativa.',

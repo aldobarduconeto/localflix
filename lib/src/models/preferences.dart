@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class PlaybackSettings {
   final bool scanOnStartup;
   final bool autoNext;
+  final bool openYoutubeExternally;
   final double speed;
   final double volume;
   final bool desktopTvMode;
@@ -11,6 +12,7 @@ class PlaybackSettings {
   const PlaybackSettings({
     this.scanOnStartup = true,
     this.autoNext = false,
+    this.openYoutubeExternally = false,
     this.speed = 1,
     this.volume = 1,
     this.desktopTvMode = false,
@@ -20,6 +22,7 @@ class PlaybackSettings {
   PlaybackSettings copyWith({
     bool? scanOnStartup,
     bool? autoNext,
+    bool? openYoutubeExternally,
     double? speed,
     double? volume,
     bool? desktopTvMode,
@@ -27,6 +30,7 @@ class PlaybackSettings {
   }) => PlaybackSettings(
     scanOnStartup: scanOnStartup ?? this.scanOnStartup,
     autoNext: autoNext ?? this.autoNext,
+    openYoutubeExternally: openYoutubeExternally ?? this.openYoutubeExternally,
     speed: speed ?? this.speed,
     volume: volume ?? this.volume,
     desktopTvMode: desktopTvMode ?? this.desktopTvMode,
@@ -45,6 +49,7 @@ class PlaybackSettings {
           ? values['scan_on_startup'] as bool
           : true,
       autoNext: values['auto_next'] == true,
+      openYoutubeExternally: values['open_youtube_externally'] == true,
       speed:
           speedValue is num &&
               [0.75, 1.0, 1.25, 1.5, 2.0].contains(speedValue.toDouble())
@@ -68,6 +73,9 @@ class PlaybackSettings {
       await prefs.setBool('scan_on_startup', scanOnStartup);
     if (previous?.autoNext != autoNext)
       await prefs.setBool('auto_next', autoNext);
+    if (previous?.openYoutubeExternally != openYoutubeExternally) {
+      await prefs.setBool('open_youtube_externally', openYoutubeExternally);
+    }
     if (previous?.speed != speed) await prefs.setDouble('speed', speed);
     if (previous?.volume != volume) await prefs.setDouble('volume', volume);
     if (previous?.desktopTvMode != desktopTvMode)

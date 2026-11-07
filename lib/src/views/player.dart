@@ -4,6 +4,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fvp/fvp.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:video_player/video_player.dart';
 
@@ -14,15 +15,19 @@ import 'artwork.dart';
 import 'details.dart';
 import 'tv_layout.dart';
 
+typedef NetworkVideoSource = ({Uri video, Uri? audio, VideoFormat? format});
+
 class PlayerPage extends StatefulWidget {
   final MediaItem initialMedia;
   final List<MediaItem> library;
   final PlaybackSettings settings;
+  final Future<List<NetworkVideoSource>> Function()? resolveVideoSources;
   const PlayerPage({
     super.key,
     required this.initialMedia,
     required this.library,
     required this.settings,
+    this.resolveVideoSources,
   });
   @override
   State<PlayerPage> createState() => _PlayerPageState();
@@ -126,6 +131,34 @@ class _PlayerPageState extends State<PlayerPage> {
     return pendingLoad;
   }
 
+  Future<VideoPlayerController?> openNetworkVideo(
+    List<NetworkVideoSource> sources,
+    int token,
+  ) async {
+    for (final source in sources) {
+      if (!mounted || token != generation) return null;
+      final controller = VideoPlayerController.networkUrl(
+        source.video,
+        formatHint: source.format,
+      );
+      video = controller;
+      try {
+        await controller.initialize().timeout(const Duration(seconds: 25));
+        if (!mounted || token != generation) return null;
+        final audioUri = source.audio;
+        if (audioUri != null) {
+          controller.setExternalAudio(audioUri.toString());
+          controller.setAudioTracks([0]);
+        }
+        return controller;
+      } catch (_) {
+        await release();
+      }
+    }
+    if (!mounted || token != generation) return null;
+    throw StateError('Não foi possível abrir os formatos disponíveis.');
+  }
+
   Future<void> open(MediaItem next, int token) async {
     try {
       if (!mounted || token != generation) return;
@@ -156,11 +189,20 @@ class _PlayerPageState extends State<PlayerPage> {
           }),
         );
       } else {
-        final controller = next.isDocument
-            ? VideoPlayerController.contentUri(next.uri)
-            : VideoPlayerController.file(next.file!);
-        video = controller;
-        await controller.initialize();
+        final resolver = widget.resolveVideoSources;
+        final VideoPlayerController controller;
+        if (resolver == null) {
+          controller = next.isDocument
+              ? VideoPlayerController.contentUri(next.uri)
+              : VideoPlayerController.file(next.file!);
+          video = controller;
+          await controller.initialize();
+        } else {
+          final sources = await resolver();
+          final initialized = await openNetworkVideo(sources, token);
+          if (initialized == null) return;
+          controller = initialized;
+        }
         if (!mounted || token != generation) return;
         await controller.setPlaybackSpeed(speed);
         if (!mounted || token != generation) return;
@@ -206,7 +248,11 @@ class _PlayerPageState extends State<PlayerPage> {
       if (mounted && token == generation)
         setState(() {
           loading = false;
-          error = 'Não foi possível abrir este arquivo.\n$e';
+          error = widget.resolveVideoSources == null
+              ? 'Não foi possível abrir este arquivo.\n$e'
+              : e is StateError
+              ? e.message
+              : 'Não foi possível reproduzir o vídeo online.';
         });
     }
   }
@@ -506,6 +552,14 @@ class _PlayerPageState extends State<PlayerPage> {
                     style: const TextStyle(fontSize: 18),
                   ),
                   actions: [
+                    if (widget.resolveVideoSources != null &&
+                        video?.value.isInitialized == true)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text('${video!.value.size.height.round()}p'),
+                        ),
+                      ),
                     if (!isAudio)
                       IconButton(
                         tooltip: 'Tela cheia (F)',

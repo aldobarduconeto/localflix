@@ -18,6 +18,7 @@ import 'package:flutter/services.dart';
 import 'views/app_theme.dart';
 import 'views/home.dart';
 import 'views/player.dart';
+import 'views/subscriptions.dart';
 import 'views/settings.dart';
 import 'views/tv_layout.dart';
 import 'views/initial_setup.dart';
@@ -565,9 +566,9 @@ class _AppState extends State<App> with WidgetsBindingObserver {
               scanning: scanning || loading || choosingFolder,
               errorMessage: errorMessage,
               metadataStatus: metadataLoading ? tmdbStatus : null,
-              onOpenSettings: () => setState(() => page = 1),
               onPlay: playMedia,
             ),
+            SubscriptionsPage(settings: settings),
             SettingsPage(
               folders: folders,
               library: library,
@@ -623,6 +624,11 @@ class _AppState extends State<App> with WidgetsBindingObserver {
                           label: Text('Biblioteca'),
                         ),
                         NavigationRailDestination(
+                          icon: Icon(Icons.subscriptions_outlined),
+                          selectedIcon: Icon(Icons.subscriptions),
+                          label: Text('Inscrições'),
+                        ),
+                        NavigationRailDestination(
                           icon: Icon(Icons.settings_outlined),
                           selectedIcon: Icon(Icons.settings),
                           label: Text('Configurações'),
@@ -644,6 +650,11 @@ class _AppState extends State<App> with WidgetsBindingObserver {
                         icon: Icon(Icons.video_library_outlined),
                         selectedIcon: Icon(Icons.video_library),
                         label: 'Biblioteca',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.subscriptions_outlined),
+                        selectedIcon: Icon(Icons.subscriptions),
+                        label: 'Inscrições',
                       ),
                       NavigationDestination(
                         icon: Icon(Icons.settings_outlined),

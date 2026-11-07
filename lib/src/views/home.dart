@@ -17,7 +17,6 @@ class HomePage extends StatefulWidget {
   final bool scanning;
   final String? errorMessage;
   final String? metadataStatus;
-  final VoidCallback onOpenSettings;
   final ValueChanged<MediaItem> onPlay;
   const HomePage({
     super.key,
@@ -26,7 +25,6 @@ class HomePage extends StatefulWidget {
     required this.scanning,
     required this.errorMessage,
     this.metadataStatus,
-    required this.onOpenSettings,
     required this.onPlay,
   });
   @override
@@ -247,11 +245,6 @@ class _HomePageState extends State<HomePage> {
                         ],
                       ),
                     ),
-                    IconButton.filledTonal(
-                      onPressed: widget.onOpenSettings,
-                      tooltip: 'Gerenciar biblioteca',
-                      icon: const Icon(Icons.tune_rounded),
-                    ),
                   ],
                 ),
               ),
@@ -315,7 +308,6 @@ class _HomePageState extends State<HomePage> {
                     wide: wide,
                     onPlay: selectItem,
                     onDetails: openDetails,
-                    onSettings: widget.onOpenSettings,
                   ),
                 ),
               ),
@@ -391,12 +383,6 @@ class _HomePageState extends State<HomePage> {
                                   : const Color(0xFF6B7280),
                             ),
                           ),
-                          if (widget.library.isEmpty)
-                            TextButton(
-                              autofocus: TvLayout.of(context),
-                              onPressed: widget.onOpenSettings,
-                              child: const Text('Adicionar minha biblioteca →'),
-                            ),
                         ],
                       ),
                     ),
@@ -619,13 +605,11 @@ class _Featured extends StatelessWidget {
   final bool wide;
   final ValueChanged<MediaItem> onPlay;
   final ValueChanged<MediaItem> onDetails;
-  final VoidCallback onSettings;
   const _Featured({
     required this.item,
     required this.wide,
     required this.onPlay,
     required this.onDetails,
-    required this.onSettings,
   });
   @override
   Widget build(BuildContext context) => ClipRRect(
@@ -744,7 +728,7 @@ class _Featured extends StatelessWidget {
                         ),
                       ),
                       onPressed: item == null
-                          ? onSettings
+                          ? null
                           : () => onPlay(item!),
                       icon: Icon(
                         item == null

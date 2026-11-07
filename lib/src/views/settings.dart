@@ -524,6 +524,19 @@ class _SettingsPageState extends State<SettingsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SwitchListTile(
+                      title: const Text('Abrir vídeos no YouTube'),
+                      subtitle: const Text(
+                        'Ative para usar o player do YouTube no aplicativo oficial '
+                        'ou no navegador. O padrão é o player do Localflix.',
+                      ),
+                      secondary: const Icon(Icons.ondemand_video_outlined),
+                      value: widget.settings.openYoutubeExternally,
+                      onChanged: (value) => widget.onSettingsChanged(
+                        widget.settings.copyWith(openYoutubeExternally: value),
+                      ),
+                    ),
+                    const Divider(),
+                    SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       secondary: Container(
                         padding: const EdgeInsets.all(10),
