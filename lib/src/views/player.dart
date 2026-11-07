@@ -10,12 +10,11 @@ import 'package:video_player/video_player.dart';
 
 import '../models/item.dart';
 import '../services/native_media.dart';
+import '../services/youtube_playback.dart';
 import '../models/preferences.dart';
 import 'artwork.dart';
 import 'details.dart';
 import 'tv_layout.dart';
-
-typedef NetworkVideoSource = ({Uri video, Uri? audio, VideoFormat? format});
 
 class PlayerPage extends StatefulWidget {
   final MediaItem initialMedia;

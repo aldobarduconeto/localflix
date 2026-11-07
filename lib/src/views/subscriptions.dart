@@ -6,18 +6,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:xml/xml.dart';
-import 'package:video_player/video_player.dart' show VideoFormat;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
 import '../models/item.dart';
 import '../models/preferences.dart';
 import '../services/preferences_store.dart';
+import '../services/youtube_playback.dart';
 import 'player.dart';
 
 class SubscriptionsPage extends StatefulWidget {
-  const SubscriptionsPage({super.key, required this.settings});
+  const SubscriptionsPage({
+    super.key,
+    required this.settings,
+    required this.active,
+  });
 
   final PlaybackSettings settings;
+  final bool active;
 
   @override
   State<SubscriptionsPage> createState() => _SubscriptionsPageState();
@@ -41,6 +46,12 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
   }
 
   @override
+  void didUpdateWidget(SubscriptionsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && ready && visibleFeed == null) refreshGrid();
+  }
+
+  @override
   void dispose() {
     scrollController.dispose();
     youtube.close();
@@ -58,7 +69,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
           if (name is String) channels[entry.key] = name;
         }
         ready = true;
-        refreshGrid();
+        if (widget.active) refreshGrid();
       });
     }, 'Não foi possível carregar as inscrições.');
   }
@@ -267,102 +278,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
           initialMedia: item,
           library: [item],
           settings: widget.settings,
-          resolveVideoSources: () async {
-            final client = YoutubeExplode();
-            try {
-              // Query independently so a client failure does not hide HD streams
-              // returned by another client.
-              final manifests = await Future.wait(
-                [
-                  YoutubeApiClient.androidVr,
-                  YoutubeApiClient.ios,
-                  YoutubeApiClient.safari,
-                  YoutubeApiClient.androidSdkless,
-                ].map((apiClient) async {
-                  try {
-                    return await client.videos.streams
-                        .getManifest(
-                          video.id,
-                          ytClients: [apiClient],
-                          requireWatchPage: false,
-                        )
-                        .timeout(const Duration(seconds: 20));
-                  } catch (_) {
-                    return null;
-                  }
-                }),
-              );
-              if (manifests.every((manifest) => manifest == null)) {
-                try {
-                  manifests.add(
-                    await client.videos.streams
-                        .getManifest(video.id)
-                        .timeout(const Duration(seconds: 12)),
-                  );
-                } catch (_) {
-                  // The watch page may expose a live HLS playlist instead.
-                }
-              }
-              final streams = <VideoStreamInfo>[];
-              final audioByVideo = <Uri, Uri>{};
-              for (final manifest in manifests.whereType<StreamManifest>()) {
-                final audio = manifest.audioOnly;
-                if (audio.isNotEmpty) {
-                  final audioUrl = audio.withHighestBitrate().url;
-                  for (final stream in manifest.videoOnly) {
-                    streams.add(stream);
-                    audioByVideo[stream.url] = audioUrl;
-                  }
-                }
-                streams.addAll(manifest.hls.whereType<HlsMuxedStreamInfo>());
-                streams.addAll(manifest.muxed);
-              }
-              streams.sort((first, second) {
-                final resolution = second.videoResolution.compareTo(
-                  first.videoResolution,
-                );
-                if (resolution != 0) return resolution;
-                final frameRate = second.framerate.compareTo(first.framerate);
-                if (frameRate != 0) return frameRate;
-                // At equal quality prefer streams with audio already attached.
-                final firstHasAudio = !audioByVideo.containsKey(first.url);
-                final secondHasAudio = !audioByVideo.containsKey(second.url);
-                if (firstHasAudio != secondHasAudio)
-                  return firstHasAudio ? -1 : 1;
-                return second.bitrate.compareTo(first.bitrate);
-              });
-              if (streams.isEmpty) {
-                final liveUrl = await client.videos.streams
-                    .getHttpLiveStreamUrl(VideoId(video.id))
-                    .timeout(const Duration(seconds: 10));
-                final uri = Uri.parse(liveUrl);
-                if (uri.scheme != 'https' || uri.host.isEmpty) {
-                  throw const FormatException(
-                    'Endereço de transmissão inválido.',
-                  );
-                }
-                return [(video: uri, audio: null, format: VideoFormat.hls)];
-              }
-              final seen = <Uri>{};
-              return [
-                for (final stream in streams)
-                  if (seen.add(stream.url))
-                    (
-                      video: stream.url,
-                      audio: audioByVideo[stream.url],
-                      format: stream is HlsMuxedStreamInfo
-                          ? VideoFormat.hls
-                          : null,
-                    ),
-              ];
-            } catch (_) {
-              throw StateError(
-                'O YouTube não forneceu um formato reproduzível para este vídeo.',
-              );
-            } finally {
-              client.close();
-            }
-          },
+          resolveVideoSources: () => resolveYoutubeVideo(video.id),
         ),
       ),
     );
@@ -391,14 +307,14 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
     final ids = <String>{};
     final results = await Future.wait(
       visibleChannels.map((channel) async {
+        final request = feeds.putIfAbsent(
+          channel.key,
+          () => loadVideos(channel.key),
+        );
         try {
-          final feed = await feeds.putIfAbsent(
-            channel.key,
-            () => loadVideos(channel.key),
-          );
-          return (channel: channel, feed: feed);
+          return (channel: channel, feed: await request);
         } catch (_) {
-          feeds.remove(channel.key);
+          if (identical(feeds[channel.key], request)) feeds.remove(channel.key);
           return (channel: channel, feed: null);
         }
       }),
@@ -439,6 +355,127 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
     );
   }
 
+  Widget buildHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: colors.outlineVariant),
+          gradient: LinearGradient(
+            colors: [colors.primary.withValues(alpha: 0.12), colors.surface],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.subscriptions_outlined, color: colors.primary),
+              const SizedBox(height: 8),
+              Text('Inscrições', style: theme.textTheme.headlineMedium),
+              const SizedBox(height: 4),
+              Text(
+                'Acompanhe os vídeos dos seus canais do YouTube.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  if (channels.isNotEmpty)
+                    SizedBox(
+                      width: 240,
+                      child: DropdownButtonFormField<String>(
+                        key: ValueKey(selectedChannel),
+                        initialValue: selectedChannel,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Canal',
+                          prefixIcon: Icon(Icons.filter_list),
+                          border: OutlineInputBorder(),
+                        ),
+                        items: [
+                          const DropdownMenuItem(
+                            value: '',
+                            child: Text('Mostrar todos'),
+                          ),
+                          for (final channel in channels.entries)
+                            DropdownMenuItem(
+                              value: channel.key,
+                              child: Text(
+                                channel.value,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                        ],
+                        onChanged: busy ? null : selectChannel,
+                      ),
+                    ),
+                  FilledButton.icon(
+                    onPressed: busy
+                        ? null
+                        : ready
+                        ? add
+                        : restore,
+                    icon: Icon(ready ? Icons.add : Icons.refresh),
+                    label: Text(
+                      ready ? 'Adicionar canal' : 'Carregar inscrições',
+                    ),
+                  ),
+                  if (channels.isNotEmpty)
+                    IconButton(
+                      tooltip: 'Atualizar vídeos',
+                      onPressed: busy
+                          ? null
+                          : () => setState(() => refreshGrid(reload: true)),
+                      icon: const Icon(Icons.refresh),
+                    ),
+                  if (selectedChannel.isNotEmpty)
+                    OutlinedButton.icon(
+                      onPressed: busy
+                          ? null
+                          : () => update(
+                              () =>
+                                  save({...channels}..remove(selectedChannel)),
+                              'Não foi possível remover o canal.',
+                            ),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Remover canal'),
+                    ),
+                ],
+              ),
+              if (busy) ...[
+                const SizedBox(height: 16),
+                const LinearProgressIndicator(),
+              ],
+              if (ready && channels.isEmpty) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'Adicione um canal pelo link ou @canal para começar.',
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void selectChannel(String? value) {
+    if (value == null || value == selectedChannel) return;
+    setState(() {
+      selectedChannel = value;
+      refreshGrid();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final behavior = ScrollConfiguration.of(context);
@@ -460,102 +497,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
               dragDevices: {...behavior.dragDevices, PointerDeviceKind.mouse},
             ),
             slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                sliver: SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Inscrições',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                      const SizedBox(height: 16),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          if (channels.isNotEmpty)
-                            SizedBox(
-                              width: 260,
-                              child: InputDecorator(
-                                decoration: const InputDecoration(
-                                  labelText: 'Canal',
-                                  border: OutlineInputBorder(),
-                                ),
-                                child: DropdownButtonHideUnderline(
-                                  child: DropdownButton<String>(
-                                    value: selectedChannel,
-                                    isExpanded: true,
-                                    isDense: true,
-                                    items: [
-                                      const DropdownMenuItem(
-                                        value: '',
-                                        child: Text('Mostrar todos'),
-                                      ),
-                                      for (final channel in channels.entries)
-                                        DropdownMenuItem(
-                                          value: channel.key,
-                                          child: Text(
-                                            channel.value,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                    ],
-                                    onChanged: busy
-                                        ? null
-                                        : (value) {
-                                            if (value == null ||
-                                                value == selectedChannel)
-                                              return;
-                                            setState(() {
-                                              selectedChannel = value;
-                                              refreshGrid();
-                                            });
-                                          },
-                                  ),
-                                ),
-                              ),
-                            ),
-                          FilledButton.icon(
-                            onPressed: busy
-                                ? null
-                                : ready
-                                ? add
-                                : restore,
-                            icon: Icon(ready ? Icons.add : Icons.refresh),
-                            label: Text(
-                              ready ? 'Adicionar canal' : 'Carregar inscrições',
-                            ),
-                          ),
-                          if (selectedChannel.isNotEmpty)
-                            OutlinedButton.icon(
-                              onPressed: busy
-                                  ? null
-                                  : () => update(
-                                      () => save(
-                                        {...channels}..remove(selectedChannel),
-                                      ),
-                                      'Não foi possível remover o canal.',
-                                    ),
-                              icon: const Icon(Icons.delete_outline),
-                              label: const Text('Remover canal'),
-                            ),
-                        ],
-                      ),
-                      if (busy) const LinearProgressIndicator(),
-                      if (ready && channels.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 16),
-                          child: Text(
-                            'Adicione um canal do YouTube pelo link ou @canal.',
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
+              SliverToBoxAdapter(child: buildHeader(context)),
               if (channels.isNotEmpty)
                 FutureBuilder(
                   future: visibleFeed,
@@ -586,21 +528,37 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
                             ),
                           ),
                         SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                          sliver: SliverGrid.builder(
-                            gridDelegate:
-                                const SliverGridDelegateWithMaxCrossAxisExtent(
-                                  maxCrossAxisExtent: 340,
-                                  crossAxisSpacing: 16,
-                                  mainAxisSpacing: 16,
-                                  mainAxisExtent: 270,
-                                ),
-                            itemCount: result.videos.length,
-                            itemBuilder: (context, index) {
-                              final entry = result.videos[index];
-                              return _VideoCard(
-                                entry: entry,
-                                onPlay: () => play(entry.video, entry.channel),
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                          sliver: SliverLayoutBuilder(
+                            builder: (context, constraints) {
+                              const gap = 16.0;
+                              final width = constraints.crossAxisExtent;
+                              final columns = ((width + gap) / (240 + gap))
+                                  .floor()
+                                  .clamp(1, 5);
+                              final cardWidth =
+                                  (width - gap * (columns - 1)) / columns;
+                              final textScale =
+                                  MediaQuery.textScalerOf(context).scale(14) /
+                                  14;
+                              return SliverGrid.builder(
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: columns,
+                                      crossAxisSpacing: gap,
+                                      mainAxisSpacing: gap,
+                                      mainAxisExtent:
+                                          cardWidth * 9 / 16 + 108 * textScale,
+                                    ),
+                                itemCount: result.videos.length,
+                                itemBuilder: (context, index) {
+                                  final entry = result.videos[index];
+                                  return _VideoCard(
+                                    entry: entry,
+                                    onPlay: () =>
+                                        play(entry.video, entry.channel),
+                                  );
+                                },
                               );
                             },
                           ),
@@ -638,11 +596,28 @@ class _VideoCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: Image.network(
-                'https://i.ytimg.com/vi/${video.id}/mqdefault.jpg',
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) =>
-                    const Center(child: Icon(Icons.play_circle_outline)),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.network(
+                    'https://i.ytimg.com/vi/${video.id}/mqdefault.jpg',
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => ColoredBox(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      child: const Center(child: Icon(Icons.movie_outlined)),
+                    ),
+                  ),
+                  const Positioned(
+                    right: 10,
+                    bottom: 10,
+                    child: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Colors.black87,
+                      foregroundColor: Colors.white,
+                      child: Icon(Icons.play_arrow_rounded),
+                    ),
+                  ),
+                ],
               ),
             ),
             Padding(
@@ -664,6 +639,8 @@ class _VideoCard extends StatelessWidget {
                   ),
                   Text(
                     video.publicationLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall,
                   ),
                 ],

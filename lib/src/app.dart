@@ -42,6 +42,24 @@ class _AppState extends State<App> with WidgetsBindingObserver {
   String tmdbStatus = 'Conecte o TMDB para descobrir capas e informações.';
   bool metadataLoading = false;
   int syncGeneration = 0;
+  static const destinations = [
+    (
+      label: 'Biblioteca',
+      icon: Icons.video_library_outlined,
+      selected: Icons.video_library,
+    ),
+    (
+      label: 'Inscrições',
+      icon: Icons.subscriptions_outlined,
+      selected: Icons.subscriptions,
+    ),
+    (
+      label: 'Configurações',
+      icon: Icons.settings_outlined,
+      selected: Icons.settings,
+    ),
+  ];
+
   int page = 0;
   bool scanning = false;
   bool choosingFolder = false;
@@ -568,7 +586,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
               metadataStatus: metadataLoading ? tmdbStatus : null,
               onPlay: playMedia,
             ),
-            SubscriptionsPage(settings: settings),
+            SubscriptionsPage(settings: settings, active: page == 1),
             SettingsPage(
               folders: folders,
               library: library,
@@ -617,22 +635,13 @@ class _AppState extends State<App> with WidgetsBindingObserver {
                       ),
                       onDestinationSelected: (value) =>
                           setState(() => page = value),
-                      destinations: const [
-                        NavigationRailDestination(
-                          icon: Icon(Icons.video_library_outlined),
-                          selectedIcon: Icon(Icons.video_library),
-                          label: Text('Biblioteca'),
-                        ),
-                        NavigationRailDestination(
-                          icon: Icon(Icons.subscriptions_outlined),
-                          selectedIcon: Icon(Icons.subscriptions),
-                          label: Text('Inscrições'),
-                        ),
-                        NavigationRailDestination(
-                          icon: Icon(Icons.settings_outlined),
-                          selectedIcon: Icon(Icons.settings),
-                          label: Text('Configurações'),
-                        ),
+                      destinations: [
+                        for (final destination in destinations)
+                          NavigationRailDestination(
+                            icon: Icon(destination.icon),
+                            selectedIcon: Icon(destination.selected),
+                            label: Text(destination.label),
+                          ),
                       ],
                     ),
                   ),
@@ -645,22 +654,13 @@ class _AppState extends State<App> with WidgetsBindingObserver {
                     selectedIndex: page,
                     onDestinationSelected: (value) =>
                         setState(() => page = value),
-                    destinations: const [
-                      NavigationDestination(
-                        icon: Icon(Icons.video_library_outlined),
-                        selectedIcon: Icon(Icons.video_library),
-                        label: 'Biblioteca',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.subscriptions_outlined),
-                        selectedIcon: Icon(Icons.subscriptions),
-                        label: 'Inscrições',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.settings_outlined),
-                        selectedIcon: Icon(Icons.settings),
-                        label: 'Configurações',
-                      ),
+                    destinations: [
+                      for (final destination in destinations)
+                        NavigationDestination(
+                          icon: Icon(destination.icon),
+                          selectedIcon: Icon(destination.selected),
+                          label: destination.label,
+                        ),
                     ],
                   ),
           ),
