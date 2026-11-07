@@ -1,17 +1,15 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:xml/xml.dart';
-import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
 import '../models/item.dart';
 import '../models/preferences.dart';
 import '../services/preferences_store.dart';
 import '../services/youtube_playback.dart';
+import '../services/youtube_subscriptions.dart';
 import 'player.dart';
 
 class SubscriptionsPage extends StatefulWidget {
@@ -30,10 +28,10 @@ class SubscriptionsPage extends StatefulWidget {
 
 class _SubscriptionsPageState extends State<SubscriptionsPage> {
   static const storageKey = 'youtube_subscriptions';
-  final youtube = YoutubeExplode();
+  final youtube = YoutubeSubscriptions();
   final scrollController = ScrollController();
   final channels = <String, String>{};
-  final feeds = <String, Future<List<_PublishedVideo>>>{};
+  final feeds = <String, Future<List<PublishedVideo>>>{};
   String selectedChannel = '';
   Future<({List<_ChannelVideo> videos, List<String> failures})>? visibleFeed;
   bool busy = true;
@@ -110,147 +108,13 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
     if (!mounted || input == null || input.isEmpty || busy) return;
 
     await update(() async {
-      final url = Uri.tryParse(
-        input.contains('://') ? input : 'https://$input',
-      );
-      final segments = url?.pathSegments ?? [];
-      final isYouTube =
-          url != null &&
-          const {
-            'youtube.com',
-            'www.youtube.com',
-            'm.youtube.com',
-          }.contains(url.host);
-      final handle = input.startsWith('@')
-          ? input
-          : isYouTube && segments.isNotEmpty && segments.first.startsWith('@')
-          ? segments.first
-          : null;
-      final id =
-          isYouTube && segments.length >= 2 && segments.first == 'channel'
-          ? segments[1]
-          : input;
-      final channel =
-          await (handle != null
-                  ? youtube.channels.getByHandle(handle)
-                  : youtube.channels.get(id))
-              .timeout(const Duration(seconds: 20));
+      final channel = await youtube.resolveChannel(input);
       if (!mounted) return;
       await save({...channels, channel.id.value: channel.title});
     }, 'Não foi possível adicionar o canal. Confira o link ou @canal.');
   }
 
-  Future<List<_PublishedVideo>> loadVideos(String id) async {
-    try {
-      final feed = await loadFeed(id);
-      if (feed.isNotEmpty) return feed;
-    } catch (_) {
-      // Public feeds may fail even when the channel has public uploads.
-    }
-
-    List<Video> uploads = [];
-    try {
-      uploads = await youtube.channels
-          .getUploadsFromPage(id)
-          .timeout(const Duration(seconds: 20));
-    } catch (_) {
-      // Try the channel's uploads playlist when its videos page is unavailable.
-    }
-    if (uploads.isEmpty) {
-      uploads = await youtube.channels
-          .getUploads(id)
-          .take(15)
-          .toList()
-          .timeout(const Duration(seconds: 20));
-    }
-    if (uploads.isEmpty) {
-      throw StateError('Não foi possível obter os vídeos deste canal.');
-    }
-    final videos = <_PublishedVideo>[];
-    for (var offset = 0; offset < uploads.length && offset < 15; offset += 4) {
-      if (!mounted) break;
-      videos.addAll(
-        await Future.wait(
-          uploads.take(15).skip(offset).take(4).map(loadVideoDetails),
-        ),
-      );
-    }
-    return videos;
-  }
-
-  Future<_PublishedVideo> loadVideoDetails(Video upload) async {
-    Video? details;
-    try {
-      details = await youtube.videos
-          .get(upload.id)
-          .timeout(const Duration(seconds: 6));
-    } catch (_) {
-      // The playlist entry can still be played if metadata is unavailable.
-    }
-    final published = details?.publishDate;
-    return _PublishedVideo(
-      id: upload.id.value,
-      title: details?.title.isNotEmpty == true ? details!.title : upload.title,
-      published: published,
-      hasPublicationTime:
-          published != null &&
-          (published.hour != 0 ||
-              published.minute != 0 ||
-              published.second != 0),
-    );
-  }
-
-  Future<List<_PublishedVideo>> loadFeed(String id) async {
-    final client = HttpClient()
-      ..connectionTimeout = const Duration(seconds: 15);
-    try {
-      return await (() async {
-        final request = await client.getUrl(
-          Uri.https('www.youtube.com', '/feeds/videos.xml', {'channel_id': id}),
-        );
-        final response = await request.close();
-        if (response.statusCode != HttpStatus.ok) {
-          throw HttpException('Feed indisponível (${response.statusCode}).');
-        }
-        final feed = XmlDocument.parse(
-          await utf8.decoder.bind(response).join(),
-        );
-        if (feed.rootElement.name.local != 'feed') {
-          throw const FormatException('Resposta inválida do feed do canal.');
-        }
-        return [
-          for (final entry in feed.rootElement.findElements(
-            'entry',
-            namespace: '*',
-          ))
-            if (entry
-                    .getElement(
-                      'videoId',
-                      namespace: 'http://www.youtube.com/xml/schemas/2015',
-                    )
-                    ?.innerText
-                case final videoId?)
-              _PublishedVideo(
-                id: videoId,
-                title:
-                    entry
-                        .getElement('title', namespace: '*')
-                        ?.innerText
-                        .trim() ??
-                    '',
-                published: DateTime.tryParse(
-                  entry.getElement('published', namespace: '*')?.innerText ??
-                      '',
-                ),
-              ),
-        ];
-      })().timeout(const Duration(seconds: 20));
-    } finally {
-      client.close(force: true);
-    }
-  }
-
-  Future<void> play(_PublishedVideo video, String channel) async {
+  Future<void> play(PublishedVideo video, String channel) async {
     final url = Uri.https('www.youtube.com', '/watch', {'v': video.id});
     if (widget.settings.openYoutubeExternally) {
       try {
@@ -309,7 +173,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
       visibleChannels.map((channel) async {
         final request = feeds.putIfAbsent(
           channel.key,
-          () => loadVideos(channel.key),
+          () => youtube.loadVideos(channel.key),
         );
         try {
           return (channel: channel, feed: await request);
@@ -575,7 +439,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage> {
   }
 }
 
-typedef _ChannelVideo = ({_PublishedVideo video, String channel});
+typedef _ChannelVideo = ({PublishedVideo video, String channel});
 
 class _VideoCard extends StatelessWidget {
   const _VideoCard({required this.entry, required this.onPlay});
@@ -686,31 +550,5 @@ class _ChannelDialogState extends State<_ChannelDialog> {
         ),
       ],
     );
-  }
-}
-
-class _PublishedVideo {
-  const _PublishedVideo({
-    required this.id,
-    required this.title,
-    required this.published,
-    this.hasPublicationTime = true,
-  });
-
-  final String id;
-  final String title;
-  final DateTime? published;
-  final bool hasPublicationTime;
-
-  String get displayTitle => title.isEmpty ? 'Vídeo do YouTube' : title;
-
-  String get publicationLabel {
-    final local = hasPublicationTime ? published?.toLocal() : published;
-    if (local == null) return 'Data de publicação indisponível';
-    String twoDigits(int value) => value.toString().padLeft(2, '0');
-    final date =
-        '${twoDigits(local.day)}/${twoDigits(local.month)}/${local.year}';
-    if (!hasPublicationTime) return date;
-    return '$date às ${twoDigits(local.hour)}:${twoDigits(local.minute)}';
   }
 }

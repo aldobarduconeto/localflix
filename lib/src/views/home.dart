@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import '../models/item.dart';
 import '../services/tmdb.dart';
 import 'series_details.dart';
+import 'app_theme.dart';
 import 'artwork.dart';
 import 'details.dart';
 import 'tv_layout.dart';
@@ -213,63 +214,46 @@ class _HomePageState extends State<HomePage> {
           scrollCacheExtent: ScrollCacheExtent.pixels(tv ? 900 : 250),
           slivers: [
             SliverPadding(
-              padding: EdgeInsets.fromLTRB(inset, 24, inset, 24),
+              padding: EdgeInsets.fromLTRB(inset, 20, inset, 20),
               sliver: SliverToBoxAdapter(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'LOCALFLIX',
-                            style: TextStyle(
-                              color: Color(0xFFE50914),
-                              fontSize: 28,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -1,
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            'CINEMA, SÉRIES E MÚSICA. DO SEU JEITO.',
-                            style: TextStyle(
-                              color: isDark
-                                  ? Colors.white38
-                                  : const Color(0xFF6B7280),
-                              fontSize: 10,
-                              letterSpacing: 1.2,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
+                child: LiquidGlassCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const LiquidGlassBadge(
+                        label: 'LOCALFLIX',
+                        icon: Icons.play_circle_outline,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      Text(
+                        'Sua biblioteca',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Encontre seus filmes, séries e músicas.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      if (size.maxWidth >= 1050 &&
+                          MediaQuery.textScalerOf(context).scale(14) <= 18)
+                        Row(
+                          children: [
+                            Expanded(child: filters),
+                            const SizedBox(width: 24),
+                            SizedBox(width: 340, child: searchField),
+                          ],
+                        )
+                      else ...[
+                        filters,
+                        const SizedBox(height: 14),
+                        searchField,
+                      ],
+                    ],
+                  ),
                 ),
-              ),
-            ),
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(inset, 0, inset, 20),
-              sliver: SliverToBoxAdapter(
-                child:
-                    size.maxWidth >= 1050 &&
-                        MediaQuery.textScalerOf(context).scale(14) <= 18
-                    ? Row(
-                        children: [
-                          Expanded(child: filters),
-                          const SizedBox(width: 24),
-                          SizedBox(width: 340, child: searchField),
-                        ],
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          filters,
-                          const SizedBox(height: 14),
-                          searchField,
-                        ],
-                      ),
               ),
             ),
             if (widget.scanning)

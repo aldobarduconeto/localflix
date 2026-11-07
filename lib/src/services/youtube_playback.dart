@@ -1,7 +1,12 @@
 import 'package:video_player/video_player.dart' show VideoFormat;
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
-typedef NetworkVideoSource = ({Uri video, Uri? audio, VideoFormat? format});
+typedef NetworkVideoSource = ({
+  Uri video,
+  Uri? audio,
+  VideoFormat? format,
+  int? height,
+});
 
 Future<List<NetworkVideoSource>> resolveYoutubeVideo(String videoId) async {
   final client = YoutubeExplode();
@@ -74,7 +79,7 @@ Future<List<NetworkVideoSource>> resolveYoutubeVideo(String videoId) async {
       if (uri.scheme != 'https' || uri.host.isEmpty) {
         throw const FormatException('Endereço de transmissão inválido.');
       }
-      return [(video: uri, audio: null, format: VideoFormat.hls)];
+      return [(video: uri, audio: null, format: VideoFormat.hls, height: null)];
     }
     final seen = <Uri>{};
     return [
@@ -82,6 +87,7 @@ Future<List<NetworkVideoSource>> resolveYoutubeVideo(String videoId) async {
         if (seen.add(stream.url))
           (
             video: stream.url,
+            height: stream.videoResolution.height,
             audio: audioByVideo[stream.url],
             format: stream is HlsMuxedStreamInfo ? VideoFormat.hls : null,
           ),

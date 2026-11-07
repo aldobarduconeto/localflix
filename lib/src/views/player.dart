@@ -57,6 +57,9 @@ class _PlayerPageState extends State<PlayerPage> {
   int generation = 0;
   int queueIndex = -1;
   Future<void> pendingLoad = Future.value();
+  List<NetworkVideoSource> networkSources = const [];
+  DateTime? networkSourcesLoadedAt;
+  int preferredHeight = 0;
 
   bool get isAudio => item.type == MediaType.audio;
   // Reuse FVP on desktop for audio-only files as well as video. This avoids
@@ -112,10 +115,14 @@ class _PlayerPageState extends State<PlayerPage> {
     }
   }
 
-  Future<void> load(MediaItem next) {
+  Future<void> load(MediaItem next, {int? quality}) {
     if (!mounted) return Future.value();
+    final resumeAt = quality == null ? null : position;
+    final autoplay = quality == null || playing;
     final token = ++generation;
     setState(() {
+      if (next.id != item.id) preferredHeight = 0;
+      if (quality != null) preferredHeight = quality;
       item = next;
       queueIndex = queue.indexWhere((entry) => entry.id == next.id);
       loading = true;
@@ -126,7 +133,9 @@ class _PlayerPageState extends State<PlayerPage> {
       lastProgressMs = -1;
     });
     revealControls();
-    pendingLoad = pendingLoad.then((_) => open(next, token));
+    pendingLoad = pendingLoad.then(
+      (_) => open(next, token, resumeAt: resumeAt, autoplay: autoplay),
+    );
     return pendingLoad;
   }
 
@@ -158,7 +167,12 @@ class _PlayerPageState extends State<PlayerPage> {
     throw StateError('Não foi possível abrir os formatos disponíveis.');
   }
 
-  Future<void> open(MediaItem next, int token) async {
+  Future<void> open(
+    MediaItem next,
+    int token, {
+    Duration? resumeAt,
+    required bool autoplay,
+  }) async {
     try {
       if (!mounted || token != generation) return;
       await release();
@@ -197,8 +211,25 @@ class _PlayerPageState extends State<PlayerPage> {
           video = controller;
           await controller.initialize();
         } else {
-          final sources = await resolver();
-          final initialized = await openNetworkVideo(sources, token);
+          final now = DateTime.now();
+          final loadedAt = networkSourcesLoadedAt;
+          if (resumeAt == null ||
+              loadedAt == null ||
+              now.difference(loadedAt) >= const Duration(minutes: 5)) {
+            final sources = await resolver();
+            if (!mounted || token != generation) return;
+            networkSources = sources;
+            networkSourcesLoadedAt = now;
+          }
+          final sources = networkSources;
+          final height = preferredHeight;
+          final ordered = height == 0
+              ? sources
+              : [
+                  ...sources.where((source) => source.height == height),
+                  ...sources.where((source) => source.height != height),
+                ];
+          final initialized = await openNetworkVideo(ordered, token);
           if (initialized == null) return;
           controller = initialized;
         }
@@ -237,7 +268,12 @@ class _PlayerPageState extends State<PlayerPage> {
           }
           if (controller.value.isCompleted) finish();
         });
-        await controller.play();
+        if (resumeAt != null && controller.value.duration > Duration.zero) {
+          final end = controller.value.duration;
+          await controller.seekTo(resumeAt < end ? resumeAt : end);
+          if (!mounted || token != generation) return;
+        }
+        if (autoplay) await controller.play();
       }
       if (mounted && token == generation) {
         setState(() => loading = false);
@@ -551,14 +587,7 @@ class _PlayerPageState extends State<PlayerPage> {
                     style: const TextStyle(fontSize: 18),
                   ),
                   actions: [
-                    if (widget.resolveVideoSources != null &&
-                        video?.value.isInitialized == true)
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('${video!.value.size.height.round()}p'),
-                        ),
-                      ),
+                    if (widget.resolveVideoSources != null) qualityMenu(),
                     if (!isAudio)
                       IconButton(
                         tooltip: 'Tela cheia (F)',
@@ -741,6 +770,44 @@ class _PlayerPageState extends State<PlayerPage> {
       ),
     ),
   );
+  Widget qualityMenu() {
+    final heights = networkSources
+        .map((source) => source.height)
+        .whereType<int>()
+        .where((height) => height > 0)
+        .toSet()
+        .toList()
+      ..sort((a, b) => b.compareTo(a));
+    final height = video?.value.size.height.round() ?? 0;
+    return PopupMenuButton<int>(
+      tooltip: 'Qualidade do vídeo',
+      enabled: !loading && error == null && heights.isNotEmpty,
+      initialValue: preferredHeight,
+      onSelected: (quality) {
+        if (quality == height && quality == preferredHeight) return;
+        load(item, quality: quality);
+      },
+      itemBuilder: (_) => [
+        const PopupMenuItem(value: 0, child: Text('Máxima disponível')),
+        for (final resolution in heights)
+          PopupMenuItem(value: resolution, child: Text('${resolution}p')),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.high_quality_outlined, size: 20),
+            if (height > 0) ...[
+              const SizedBox(width: 6),
+              Text('${height}p'),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget videoSurface() => MouseRegion(
     onHover: (_) {
       if (!controlsVisible.value) {
@@ -870,7 +937,9 @@ class _PlayerPageState extends State<PlayerPage> {
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
-                                      ],
+                                          if (widget.resolveVideoSources != null)
+                                            qualityMenu(),
+                                        ],
                                     ),
                                   ),
                                 ),
